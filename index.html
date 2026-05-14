@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>El rincón de Logise</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#fff7ed', 100: '#ffedd5', 500: '#f97316', 600: '#ea580c' }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #fafafa; }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="text-gray-800 antialiased selection:bg-brand-100 selection:text-brand-600">
+
+    <div class="max-w-4xl mx-auto px-4 py-16 sm:py-24">
+        
+        <!-- Header Minimalista -->
+        <header class="text-center mb-16">
+            <h1 class="text-4xl sm:text-5xl font-extrabold text-gray-900 tracking-tight mb-4">
+                El rincón de <span class="text-brand-500">Logise</span>
+            </h1>
+            <p class="text-lg sm:text-xl text-gray-500 max-w-2xl mx-auto font-light">
+                Un sitio en el que una persona poco conocida pone lo que le da la gana
+            </p>
+        </header>
+
+        <!-- Indicador de Datos -->
+        <div class="flex justify-end mb-6">
+            <div id="data-source-badge" class="hidden items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                <span class="w-2 h-2 rounded-full bg-gray-400" id="status-dot"></span>
+                <span id="status-text">Cargando...</span>
+            </div>
+        </div>
+
+        <!-- Contenedor de Posts -->
+        <main id="posts-container" class="grid gap-8 md:grid-cols-2">
+            <!-- Esqueletos de carga -->
+            <div class="bg-white rounded-2xl p-6 border border-gray-100 animate-pulse">
+                <div class="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
+                <div class="h-20 bg-gray-200 rounded w-full mb-6"></div>
+            </div>
+            <div class="bg-white rounded-2xl p-6 border border-gray-100 animate-pulse">
+                <div class="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
+                <div class="h-20 bg-gray-200 rounded w-full mb-6"></div>
+            </div>
+        </main>
+
+        <!-- Modal para leer el artículo -->
+        <div id="article-modal" class="fixed inset-0 z-50 hidden flex justify-center p-4 sm:p-6 items-start overflow-y-auto">
+            <div class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm" onclick="closeArticle()"></div>
+            <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl my-auto p-6 sm:p-10 fade-in">
+                <button onclick="closeArticle()" class="absolute top-4 right-4 w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-gray-500 hover:text-brand-500 hover:bg-brand-50 transition-colors">
+                    <i class="ph ph-x text-xl"></i>
+                </button>
+                
+                <div class="mb-4 text-brand-500 text-sm font-semibold tracking-wide uppercase" id="modal-category"></div>
+                <h2 class="text-3xl font-extrabold text-gray-900 mb-2 leading-tight" id="modal-title"></h2>
+                <div class="text-sm text-gray-500 mb-8 pb-6 border-b border-gray-100" id="modal-meta"></div>
+                
+                <div class="prose prose-lg text-gray-600 leading-relaxed space-y-5" id="modal-content"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const demoPosts = [
+            {
+                "id": 1,
+                "title": "Bienvenidos a mi rincón",
+                "excerpt": "Este es el primer post de demostración. Aquí escribiré lo que me dé la gana cuando me dé la gana.",
+                "content": "<p>Hola a todos, este es mi nuevo espacio en internet.</p><p>La idea es mantenerlo simple: sin distracciones, sin pop-ups, solo texto y alguna que otra idea suelta que se me pase por la cabeza.</p><h3>¿Por qué naranja?</h3><p>Porque me gusta. Resalta sobre el blanco y le da un toque moderno.</p>",
+                "date": "14 May, 2026",
+                "category": "General",
+                "readTime": "1 min"
+            }
+        ];
+
+        let currentPosts = [];
+
+        document.addEventListener('DOMContentLoaded', loadPosts);
+
+        async function loadPosts() {
+            const statusBadge = document.getElementById('data-source-badge');
+            const statusDot = document.getElementById('status-dot');
+            const statusText = document.getElementById('status-text');
+            statusBadge.style.display = 'flex';
+
+            try {
+                const response = await fetch('posts.json', { cache: "no-store" });
+                if (!response.ok) throw new Error("No se pudo cargar posts.json");
+                
+                const data = await response.json();
+                if (Array.isArray(data) && data.length > 0) {
+                    currentPosts = data;
+                    renderPosts(currentPosts);
+                    statusDot.className = 'w-2 h-2 rounded-full bg-green-500';
+                    statusText.textContent = 'JSON Cargado';
+                } else throw new Error("JSON vacío");
+            } catch (error) {
+                currentPosts = demoPosts;
+                setTimeout(() => {
+                    renderPosts(currentPosts);
+                    statusDot.className = 'w-2 h-2 rounded-full bg-brand-500 animate-pulse';
+                    statusText.textContent = 'Modo Demo';
+                }, 500);
+            }
+        }
+
+        function renderPosts(posts) {
+            const container = document.getElementById('posts-container');
+            container.innerHTML = ''; 
+
+            posts.forEach((post, index) => {
+                const article = document.createElement('article');
+                article.className = 'bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer fade-in flex flex-col group';
+                article.style.animationDelay = `${index * 0.1}s`;
+                article.onclick = () => openArticle(post.id);
+
+                article.innerHTML = `
+                    <span class="text-xs font-semibold text-brand-500 mb-2 uppercase tracking-wider">${post.category}</span>
+                    <h2 class="text-xl font-bold text-gray-900 mb-3 group-hover:text-brand-500 transition-colors">${post.title}</h2>
+                    <p class="text-gray-500 mb-6 flex-grow line-clamp-3">${post.excerpt}</p>
+                    <div class="flex items-center justify-between text-xs text-gray-400 mt-auto pt-4 border-t border-gray-50">
+                        <span>${post.date}</span>
+                        <span><i class="ph ph-clock"></i> ${post.readTime}</span>
+                    </div>
+                `;
+                container.appendChild(article);
+            });
+        }
+
+        function openArticle(id) {
+            const post = currentPosts.find(p => p.id === id);
+            if (!post) return;
+
+            document.getElementById('modal-category').textContent = post.category;
+            document.getElementById('modal-title').textContent = post.title;
+            document.getElementById('modal-meta').innerHTML = `Publicado el ${post.date} &bull; Lectura de ${post.readTime}`;
+            
+            const contentDiv = document.getElementById('modal-content');
+            contentDiv.innerHTML = post.content;
+            
+            // Estilos básicos para el contenido dinámico
+            contentDiv.querySelectorAll('h3').forEach(h => h.classList.add('text-xl', 'font-bold', 'text-gray-900', 'mt-6', 'mb-2'));
+            contentDiv.querySelectorAll('p').forEach(p => p.classList.add('mb-4'));
+            contentDiv.querySelectorAll('ul').forEach(ul => ul.classList.add('list-disc', 'list-inside', 'mb-4', 'ml-4'));
+
+            document.getElementById('article-modal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeArticle() {
+            document.getElementById('article-modal').classList.add('hidden');
+            document.body.style.overflow = ''; 
+        }
+
+        document.addEventListener('keydown', e => { if (e.key === "Escape") closeArticle(); });
+    </script>
+</body>
+</html>
